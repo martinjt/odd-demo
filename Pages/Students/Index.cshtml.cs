@@ -24,7 +24,9 @@ namespace honeycomb_odd.Pages.Students
         public async Task OnGetAsync()
         {
             using var span = ActivityHelper.Source.StartActivity("Get Students");
+
             Student = await _context.Students.ToListAsync();
+
             span?.AddTag("no_of_students", Student.Count);
         }
     }

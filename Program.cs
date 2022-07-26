@@ -2,6 +2,7 @@ using System.Diagnostics;
 using Honeycomb.OpenTelemetry;
 using honeycomb_odd.Data;
 using Microsoft.EntityFrameworkCore;
+using OpenTelemetry.Trace;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -10,7 +11,19 @@ builder.Services.AddRazorPages();
 builder.Services.AddDbContext<SchoolContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("SchoolContextSQLite")));
 
-builder.Services.AddHoneycomb(builder.Configuration);
+// --- OpenTelemetry Code
+var options = builder.Configuration.GetSection("Honeycomb").Get<HoneycombOptions>();
+builder.Services.AddOpenTelemetryTracing(o => {
+    o
+    .AddSource(ActivityHelper.SourceName)
+    .AddAspNetCoreInstrumentation()
+    .AddEntityFrameworkCoreInstrumentation(o => {
+        o.SetDbStatementForStoredProcedure = true;
+        o.SetDbStatementForText = true;
+    })
+    .AddHoneycomb(options);
+});
+// -- OpenTelemetry Code
 
 var app = builder.Build();
 
@@ -41,7 +54,8 @@ app.MapRazorPages();
 
 app.Run();
 
-internal class ActivityHelper
+public class ActivityHelper
 {
-    public static ActivitySource Source = new ActivitySource("odd-demo");
+    public const string SourceName = "odd-demo";
+    public static ActivitySource Source = new ActivitySource(SourceName);
 }
